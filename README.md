@@ -31,10 +31,16 @@ Turn Level Match off for an uncompensated comparison. Use **Relearn** after a su
 
 ## GitHub Actions
 
-Set the repository Actions variable `PNAM_CORE_SHA` to the full 40-character commit SHA from `Faverooo/ParametricNeuralAmpModelerCore`. Build artifacts are available on each successful workflow run. A `v*` tag publishes the platform ZIP files after the build matrix passes. Each archive records its Core SHA in `CORE_REVISION.txt`.
+Set the repository Actions variable `PNAM_CORE_SHA` to the full 40-character commit SHA from `Faverooo/ParametricNeuralAmpModelerCore`. Successful runs provide installer artifacts. Branch runs also provide a portable ZIP. A release tag such as `v0.1.0` publishes only the installers after the build and test matrix passes. The installed bundle records its Core commit and license notices in `Contents/Resources`.
 
-Extract the archive and copy the entire `ParametricNAM.vst3` bundle to your VST3 folder.
+## Install a release
 
-- Linux: `~/.vst3/`
-- Windows: `C:\Program Files\Common Files\VST3\`
-- macOS: `~/Library/Audio/Plug-Ins/VST3/`
+- **Windows x64:** run the Setup executable. It installs to `C:\Program Files\Common Files\VST3\` and adds an uninstaller.
+- **macOS:** open the PKG for your architecture. It installs to `/Library/Audio/Plug-Ins/VST3/`.
+- **Linux x86-64:** run `bash ParametricNAM-VST3-<version>-Linux-X64.run`. Confirm to install to `~/.vst3/`. The installer can also update an existing bundle.
+
+Close your DAW before installing, then rescan for VST3 plug-ins. Installers and binaries are unsigned. Model files are distributed separately.
+
+## Updates
+
+The interface checks GitHub for the latest stable release in the background. If that release is newer, the **Update** button opens its download page. The check needs internet access. Installation remains manual.

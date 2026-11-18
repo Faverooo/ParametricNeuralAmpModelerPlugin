@@ -1,6 +1,7 @@
 #pragma once
 
 #include "PluginProcessor.h"
+#include "UpdateCheck.h"
 
 class ParametricNAMEditor final : public juce::AudioProcessorEditor, private juce::Timer
 {
@@ -24,6 +25,8 @@ private:
     ParametricNAMProcessor& processor;
     ParametricNAMProcessor::ModelInfo info;
     Theme theme;
+    UpdateCheck updates{"Faverooo/ParametricNeuralAmpModelerPlugin", PNAM_BUILD_VERSION};
+    juce::TextButton updateButton;
     juce::TextButton openButton{"Load model"};
     juce::Label identity{"identity", "PARAMETRICNAM"};
     juce::Label amplifier;

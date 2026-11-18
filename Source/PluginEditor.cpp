@@ -89,6 +89,11 @@ ParametricNAMEditor::ParametricNAMEditor(ParametricNAMProcessor& owner)
     : AudioProcessorEditor(owner), processor(owner)
 {
     setLookAndFeel(&theme);
+    addChildComponent(updateButton);
+    updateButton.setColour(juce::TextButton::buttonColourId, panel);
+    updateButton.setColour(juce::TextButton::textColourOffId, mint);
+    updateButton.setTooltip("Open the latest VST3 release on GitHub");
+    updateButton.onClick = [this] { updates.openReleasePage(); };
     addAndMakeVisible(openButton);
     addAndMakeVisible(identity);
     addAndMakeVisible(amplifier);
@@ -189,6 +194,11 @@ void ParametricNAMEditor::resized()
     auto area = getLocalBounds().reduced(20);
     auto header = area.removeFromTop(52);
     openButton.setBounds(header.removeFromRight(115).withSizeKeepingCentre(115, 34));
+    if (updateButton.isVisible())
+    {
+        header.removeFromRight(8);
+        updateButton.setBounds(header.removeFromRight(104).withSizeKeepingCentre(104, 34));
+    }
     identity.setBounds(header.removeFromTop(17));
     amplifier.setBounds(header.withTrimmedRight(8));
     status.setBounds(area.removeFromTop(26));
@@ -220,6 +230,16 @@ void ParametricNAMEditor::resized()
 
 void ParametricNAMEditor::timerCallback()
 {
+    if (!updateButton.isVisible())
+    {
+        const auto version = updates.availableVersion();
+        if (version.isNotEmpty())
+        {
+            updateButton.setButtonText("Update " + version);
+            updateButton.setVisible(true);
+            resized();
+        }
+    }
     auto next = processor.modelInfo();
     const auto previous = std::move(info);
     info = std::move(next);

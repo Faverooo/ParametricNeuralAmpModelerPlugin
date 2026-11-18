@@ -1,5 +1,11 @@
 cmake_minimum_required(VERSION 3.22)
 project(ParametricNAM VERSION 0.1.0 LANGUAGES C CXX)
+set(PNAM_RELEASE_TAG "" CACHE STRING "Release tag used for update notifications")
+set(PNAM_BUILD_VERSION "${PROJECT_VERSION}")
+if(PNAM_RELEASE_TAG MATCHES "^v([0-9]+[.][0-9]+[.][0-9]+)([-+][0-9A-Za-z.+-]+)?$")
+    set(PNAM_BUILD_VERSION "${CMAKE_MATCH_1}")
+endif()
+
 
 set(PNAM_CORE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/../ParametricNeuralAmpModelerCore" CACHE PATH "Local PNAM Core checkout")
 set(PNAM_EIGEN_DIR "${PNAM_CORE_DIR}/Dependencies/eigen" CACHE PATH "Eigen source directory")
@@ -39,6 +45,8 @@ if(PNAM_BUILD_VST3)
     endif()
 
     juce_add_plugin(ParametricNAM
+        VERSION "${PNAM_BUILD_VERSION}"
+        NEEDS_CURL TRUE
         COMPANY_NAME "Faverooo"
         BUNDLE_ID "com.faverooo.parametricnam"
         PLUGIN_MANUFACTURER_CODE Fvro
@@ -47,7 +55,7 @@ if(PNAM_BUILD_VST3)
         PRODUCT_NAME "ParametricNAM"
         VST3_CATEGORIES Fx Distortion)
     target_sources(ParametricNAM PRIVATE Source/PluginProcessor.cpp Source/PluginEditor.cpp)
-    target_compile_definitions(ParametricNAM PRIVATE JUCE_WEB_BROWSER=0 JUCE_USE_CURL=0 JUCE_VST3_CAN_REPLACE_VST2=0)
+    target_compile_definitions(ParametricNAM PRIVATE JUCE_WEB_BROWSER=0 JUCE_USE_CURL=1 PNAM_BUILD_VERSION="${PNAM_BUILD_VERSION}" JUCE_VST3_CAN_REPLACE_VST2=0)
     target_link_libraries(ParametricNAM PRIVATE pnam_core juce::juce_audio_processors)
 endif()
 
