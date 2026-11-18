@@ -18,7 +18,7 @@ jobs:
         os: [ubuntu-24.04, windows-latest, macos-latest]
     runs-on: ${{ matrix.os }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - name: Validate Core revision
         shell: bash
         env:
@@ -29,7 +29,7 @@ jobs:
             exit 1
           fi
       - name: Check out PNAM Core
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         with:
           repository: Faverooo/ParametricNeuralAmpModelerCore
           ref: ${{ vars.PNAM_CORE_SHA }}
@@ -37,7 +37,7 @@ jobs:
           submodules: recursive
           persist-credentials: false
       - name: Check out JUCE 8.0.6
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         with:
           repository: juce-framework/JUCE
           ref: 8.0.6
@@ -65,7 +65,7 @@ jobs:
           cp core/LICENSE package/LICENSE-Core.txt
           cp ci-juce/LICENSE.md package/LICENSE-JUCE.md
           (cd package && cmake -E tar cf "../$ARCHIVE" --format=zip ParametricNAM.vst3 README.md CORE_REVISION.txt LICENSE-Core.txt LICENSE-JUCE.md)
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v6
         with:
           name: VST3-${{ runner.os }}-${{ runner.arch }}
           path: ParametricNAM-VST3-*.zip
@@ -78,7 +78,7 @@ jobs:
     permissions:
       contents: write
     steps:
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v7
         with:
           pattern: VST3-*
           path: packages
