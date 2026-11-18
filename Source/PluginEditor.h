@@ -28,13 +28,17 @@ private:
     UpdateCheck updates{"Faverooo/ParametricNeuralAmpModelerPlugin", PNAM_BUILD_VERSION};
     juce::TextButton updateButton;
     juce::TextButton openButton{"Load model"};
-    juce::Label identity{"identity", "PARAMETRICNAM"};
+
     juce::Label amplifier;
     juce::Label status;
     juce::ToggleButton matchButton{"Level Match"};
     juce::TextButton relearnButton{"Relearn"};
     juce::Label matchStatus;
-    std::array<juce::Rectangle<int>, ParametricNAMProcessor::maximumControls> cards;
+    juce::Label outputLabel{"output", "Output"};
+    juce::Slider outputDial;
+    std::unique_ptr<juce::AudioProcessorValueTreeState::SliderAttachment> outputAttachment;
+    juce::Rectangle<int> outputPanel;
+    juce::Rectangle<int> headerRule;
     std::array<juce::Label, ParametricNAMProcessor::maximumControls> labels;
     std::array<juce::Slider, ParametricNAMProcessor::maximumControls> dials;
     std::array<std::unique_ptr<juce::AudioProcessorValueTreeState::SliderAttachment>,

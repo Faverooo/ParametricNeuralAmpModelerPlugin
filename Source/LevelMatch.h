@@ -51,7 +51,7 @@ public:
         }
     }
 
-    float targetDb() const { return enabled ? correctionDb.value_or(0.0f) : 0.0f; }
+    float targetDb(float manualDb = 0.0f) const { return enabled ? correctionDb.value_or(0.0f) : manualDb; }
 
     bool enabled = false;
     bool measuring = false;

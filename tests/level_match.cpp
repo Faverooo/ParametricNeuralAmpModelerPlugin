@@ -27,9 +27,9 @@ int main()
         check(!match.measuring && std::abs(match.targetDb() - 6.0206f) < 0.001f, "Incorrect learned gain");
 
         match.setEnabled(false);
-        check(match.targetDb() == 0, "Bypass still applies gain");
+        check(match.targetDb() == 0 && match.targetDb(-4.0f) == -4.0f, "Manual output trim not applied");
         match.setEnabled(true);
-        check(!match.measuring && match.targetDb() > 6.0f, "Enabling lost the learned gain");
+        check(!match.measuring && match.targetDb(-4.0f) > 6.0f, "Enabling lost the learned gain");
 
         match.start();
         match.measure(1000, 4000, 240000, 1, 48000);

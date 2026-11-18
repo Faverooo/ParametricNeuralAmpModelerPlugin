@@ -47,6 +47,7 @@ public:
     void enableLevelMatch(bool enabled);
     void relearnLevelMatch();
     static juce::String controlId(size_t index);
+    static constexpr auto outputTrimId = "outputTrimDb";
     juce::AudioProcessorValueTreeState parameters;
 
 private:
@@ -67,6 +68,8 @@ private:
     double processingRate = 0;
     int blockCapacity = 0;
     bool modelReady = false;
+    std::atomic<float>* outputTrim = nullptr;
+    float outputTargetDb() const;
     LevelMatch levelMatch;
-    juce::SmoothedValue<float> matchGain{1.0f};
+    juce::SmoothedValue<float> outputGain{1.0f};
 };

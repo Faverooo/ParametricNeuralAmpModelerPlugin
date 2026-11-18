@@ -27,7 +27,7 @@ The first version passes dry audio through when no model is loaded or when the h
 
 Enable **Level Match** and play a representative loop with the controls held steady. The plugin measures five seconds of active input and compares the dry and model-output RMS. It then applies a fixed output trim limited to ±18 dB. Blocks below −60 dBFS RMS on the input do not count toward the measurement.
 
-Turn Level Match off for an uncompensated comparison. Use **Relearn** after a substantial control change. Opening a new model clears the previous match. The completed trim and on/off state are saved with the project.
+Turn Level Match off to use the manual Output control from −24 to +24 dB. Double-click Output to return to 0 dB. The manual gain is saved with the project and can be automated. Level Match temporarily takes over the output level while enabled. Use **Relearn** after a substantial control change. Opening a new model clears the previous match. The completed trim and on/off state are saved with the project.
 
 ## GitHub Actions
 

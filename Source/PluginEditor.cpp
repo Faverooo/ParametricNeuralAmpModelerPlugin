@@ -5,14 +5,25 @@
 
 namespace
 {
-constexpr int editorWidth = 576;
-const juce::Colour ink{0xfff0f4ff};
-const juce::Colour muted{0xffa1adca};
-const juce::Colour mint{0xff83f4ce};
-const juce::Colour panel{0xff1a2438};
-const juce::Colour edge{0xff33425e};
-const std::array<juce::Colour, 4> dialColours{mint, juce::Colour(0xff8eb8ff),
-                                             juce::Colour(0xffc5a6ff), juce::Colour(0xffffb68e)};
+constexpr int editorWidth = 646;
+constexpr int minimumWidth = 500;
+constexpr int maximumWidth = 1100;
+constexpr int maximumHeight = 720;
+constexpr int emptyHeight = 122;
+
+int minimumHeightFor(size_t controlCount)
+{
+    if (controlCount == 0)
+        return emptyHeight;
+    return controlCount <= 6 ? 326 : 420;
+}
+const juce::Colour surface{0xff191915};
+const juce::Colour ink{0xfff2eee2};
+const juce::Colour muted{0xffb7b0a0};
+const juce::Colour amber{0xffffba69};
+const juce::Colour panel{0xff25231d};
+const juce::Colour edge{0xff514a3c};
+const juce::Colour primary{0xffe7ddc8};
 
 juce::Font face(float size, int style = juce::Font::plain)
 {
@@ -33,7 +44,7 @@ void ParametricNAMEditor::Theme::drawRotarySlider(juce::Graphics& g, int x, int 
                                                   float position, float start, float end, juce::Slider& slider)
 {
     const auto centre = juce::Rectangle<float>(float(x), float(y), float(width), float(height)).getCentre();
-    const auto radius = std::min(38.0f, float(std::min(width, height)) / 2.0f - 5.0f);
+    const auto radius = std::min(43.0f, float(std::min(width, height)) / 2.0f - 5.0f);
     if (radius < 12.0f)
         return;
     const auto accent = slider.findColour(juce::Slider::rotarySliderFillColourId);
@@ -45,14 +56,19 @@ void ParametricNAMEditor::Theme::drawRotarySlider(juce::Graphics& g, int x, int 
 
     const auto disc = juce::Rectangle<float>(2.0f * (radius - 9.0f), 2.0f * (radius - 9.0f))
                           .withCentre(centre);
-    g.setGradientFill(juce::ColourGradient(juce::Colour(0xff374460), centre.x, disc.getY(),
-                                          juce::Colour(0xff131d30), centre.x, disc.getBottom(), false));
+    g.setGradientFill(juce::ColourGradient(juce::Colour(0xff37352f), centre.x, disc.getY(),
+                                          juce::Colour(0xff201f1a), centre.x, disc.getBottom(), false));
     g.fillEllipse(disc);
     g.setColour(edge);
     g.drawEllipse(disc, 1.0f);
     const auto pointer = centre.getPointOnCircumference(radius - 17.0f, angle);
     g.setColour(accent);
     g.fillEllipse(juce::Rectangle<float>(5.0f, 5.0f).withCentre(pointer));
+    if (slider.hasKeyboardFocus(true))
+    {
+        g.setColour(accent);
+        g.drawEllipse(disc.expanded(3.0f), 1.0f);
+    }
 }
 
 void ParametricNAMEditor::Theme::drawButtonBackground(juce::Graphics& g, juce::Button& button,
@@ -62,7 +78,7 @@ void ParametricNAMEditor::Theme::drawButtonBackground(juce::Graphics& g, juce::B
     auto fill = colour.withMultipliedAlpha(button.isEnabled() ? 1.0f : 0.4f);
     g.setColour(fill.brighter(down ? 0.22f : hover ? 0.12f : 0.0f));
     g.fillRoundedRectangle(bounds, 9.0f);
-    g.setColour(button.hasKeyboardFocus(true) ? mint : edge.withAlpha(0.65f));
+    g.setColour(button.hasKeyboardFocus(true) ? amber : edge.withAlpha(0.65f));
     g.drawRoundedRectangle(bounds, 9.0f, 1.0f);
 }
 
@@ -73,11 +89,11 @@ void ParametricNAMEditor::Theme::drawToggleButton(juce::Graphics& g, juce::Toggl
     const juce::Rectangle<float> track(2.0f, area.getCentreY() - 8.0f, 30.0f, 16.0f);
     const bool active = button.getToggleState();
     const float opacity = button.isEnabled() ? 1.0f : 0.45f;
-    g.setColour((active ? mint : edge).withAlpha(opacity).brighter((hover || down) ? 0.12f : 0.0f));
+    g.setColour((active ? amber : edge).withAlpha(opacity).brighter((hover || down) ? 0.12f : 0.0f));
     g.fillRoundedRectangle(track, 8.0f);
     if (button.hasKeyboardFocus(true))
         g.drawRoundedRectangle(track.expanded(2.0f), 10.0f, 1.0f);
-    g.setColour((active ? juce::Colour(0xff143329) : ink).withAlpha(opacity));
+    g.setColour((active ? juce::Colour(0xff2e2214) : ink).withAlpha(opacity));
     g.fillEllipse(track.getX() + (active ? 16.0f : 3.0f), track.getY() + 2.0f, 12.0f, 12.0f);
     g.setColour(ink.withAlpha(opacity));
     g.setFont(face(14.0f, juce::Font::bold));
@@ -91,11 +107,12 @@ ParametricNAMEditor::ParametricNAMEditor(ParametricNAMProcessor& owner)
     setLookAndFeel(&theme);
     addChildComponent(updateButton);
     updateButton.setColour(juce::TextButton::buttonColourId, panel);
-    updateButton.setColour(juce::TextButton::textColourOffId, mint);
+    updateButton.setColour(juce::TextButton::textColourOffId, amber);
     updateButton.setTooltip("Open the latest VST3 release on GitHub");
     updateButton.onClick = [this] { updates.openReleasePage(); };
     addAndMakeVisible(openButton);
-    addAndMakeVisible(identity);
+    addAndMakeVisible(outputLabel);
+    addAndMakeVisible(outputDial);
     addAndMakeVisible(amplifier);
     addAndMakeVisible(status);
     addAndMakeVisible(matchButton);
@@ -112,27 +129,47 @@ ParametricNAMEditor::ParametricNAMEditor(ParametricNAMProcessor& owner)
         timerCallback();
     };
     openButton.onClick = [this] { chooseModel(); };
-    identity.setFont(face(12.0f, juce::Font::bold));
-    identity.setColour(juce::Label::textColourId, mint);
-    amplifier.setFont(face(27.0f, juce::Font::bold));
+
+    amplifier.setFont(face(28.0f, juce::Font::bold));
     amplifier.setColour(juce::Label::textColourId, ink);
-    status.setColour(juce::Label::textColourId, juce::Colour(0xffffb68e));
-    matchStatus.setColour(juce::Label::textColourId, mint);
-    matchStatus.setJustificationType(juce::Justification::centredRight);
+    status.setColour(juce::Label::textColourId, juce::Colour(0xffffb393));
+    matchStatus.setColour(juce::Label::textColourId, muted);
+    matchStatus.setJustificationType(juce::Justification::centred);
     openButton.setTooltip("Load a .pnam model");
-    openButton.setColour(juce::TextButton::buttonColourId, mint);
-    openButton.setColour(juce::TextButton::textColourOffId, juce::Colour(0xff152a27));
+    openButton.setColour(juce::TextButton::buttonColourId, primary);
+    openButton.setColour(juce::TextButton::textColourOffId, juce::Colour(0xff282116));
     relearnButton.setColour(juce::TextButton::buttonColourId, panel);
     relearnButton.setColour(juce::TextButton::textColourOffId, ink);
+
+    outputLabel.setFont(face(15.0f, juce::Font::bold));
+    outputLabel.setColour(juce::Label::textColourId, ink);
+    outputLabel.setJustificationType(juce::Justification::centred);
+    outputDial.setTitle("Output volume");
+    outputDial.setTooltip("Manual output gain. Turn off Level Match to adjust.");
+    outputDial.setSliderStyle(juce::Slider::RotaryHorizontalVerticalDrag);
+    outputDial.setTextBoxStyle(juce::Slider::TextBoxBelow, false, 86, 24);
+    outputDial.setColour(juce::Slider::rotarySliderFillColourId, amber);
+    outputDial.setColour(juce::Slider::textBoxTextColourId, ink);
+    outputDial.setColour(juce::Slider::textBoxBackgroundColourId, surface);
+    outputDial.setColour(juce::Slider::textBoxOutlineColourId, edge);
+    outputAttachment = std::make_unique<juce::AudioProcessorValueTreeState::SliderAttachment>(
+        processor.parameters, ParametricNAMProcessor::outputTrimId, outputDial);
+    outputDial.textFromValueFunction = [](double db)
+    {
+        return juce::String(db > 0 ? "+" : "") + juce::String(db, 1) + " dB";
+    };
+    outputDial.valueFromTextFunction = [](const juce::String& text) { return text.getDoubleValue(); };
+    outputDial.setDoubleClickReturnValue(true, 0.0);
+    outputDial.updateText();
 
     for (size_t i = 0; i < dials.size(); ++i)
     {
         auto& dial = dials[i];
         dial.setSliderStyle(juce::Slider::RotaryHorizontalVerticalDrag);
         dial.setTextBoxStyle(juce::Slider::TextBoxBelow, false, 70, 24);
-        dial.setColour(juce::Slider::rotarySliderFillColourId, dialColours[i % dialColours.size()]);
+        dial.setColour(juce::Slider::rotarySliderFillColourId, primary);
         dial.setColour(juce::Slider::textBoxTextColourId, ink);
-        dial.setColour(juce::Slider::textBoxBackgroundColourId, juce::Colour(0xff111a2b));
+        dial.setColour(juce::Slider::textBoxBackgroundColourId, juce::Colour(0xff201e18));
         dial.setColour(juce::Slider::textBoxOutlineColourId, edge);
         addAndMakeVisible(dial);
         labels[i].setFont(face(14.0f, juce::Font::bold));
@@ -158,7 +195,9 @@ ParametricNAMEditor::ParametricNAMEditor(ParametricNAMProcessor& owner)
                                           / (control.maximum - control.minimum));
         };
     }
-    setSize(editorWidth, 130);
+    setResizable(true, true);
+    setResizeLimits(minimumWidth, emptyHeight, maximumWidth, maximumHeight);
+    setSize(editorWidth, emptyHeight);
     timerCallback();
     startTimerHz(6);
 }
@@ -171,57 +210,59 @@ ParametricNAMEditor::~ParametricNAMEditor()
 
 void ParametricNAMEditor::paint(juce::Graphics& g)
 {
-    g.setGradientFill(juce::ColourGradient(juce::Colour(0xff202b43), 0, 0, juce::Colour(0xff101827),
-                                          float(getWidth()), float(getHeight()), false));
-    g.fillAll();
-    for (size_t i = 0; i < info.controls.size(); ++i)
+    g.fillAll(surface);
+    g.setColour(edge);
+    g.fillRect(headerRule);
+    if (!outputPanel.isEmpty())
     {
-        const auto card = cards[i].toFloat().reduced(0.5f);
         g.setColour(panel);
-        g.fillRoundedRectangle(card, 13.0f);
-        g.setColour(edge);
-        g.drawRoundedRectangle(card, 13.0f, 1.0f);
-    }
-    if (!info.controls.empty())
-    {
-        g.setColour(edge);
-        g.fillRect(20, getHeight() - 57, getWidth() - 40, 1);
+        g.fillRoundedRectangle(outputPanel.toFloat(), 13.0f);
     }
 }
 
 void ParametricNAMEditor::resized()
 {
-    auto area = getLocalBounds().reduced(20);
-    auto header = area.removeFromTop(52);
-    openButton.setBounds(header.removeFromRight(115).withSizeKeepingCentre(115, 34));
+    auto area = getLocalBounds().reduced(22, 16);
+    auto header = area.removeFromTop(44);
+    openButton.setBounds(header.removeFromRight(110).withSizeKeepingCentre(110, 34));
     if (updateButton.isVisible())
     {
         header.removeFromRight(8);
         updateButton.setBounds(header.removeFromRight(104).withSizeKeepingCentre(104, 34));
     }
-    identity.setBounds(header.removeFromTop(17));
     amplifier.setBounds(header.withTrimmedRight(8));
-    status.setBounds(area.removeFromTop(26));
+    headerRule = area.removeFromTop(7).withTrimmedTop(6);
+    status.setBounds(area.removeFromBottom(info.controls.empty() ? 36 : 25));
+    area.removeFromTop(14);
+    outputPanel = {};
+    if (info.controls.empty())
+        return;
 
-    auto toolbar = area.removeFromBottom(29);
-    matchButton.setBounds(toolbar.removeFromLeft(130));
-    relearnButton.setBounds(toolbar.removeFromRight(82));
-    matchStatus.setBounds(toolbar.withTrimmedRight(10));
-    area.removeFromBottom(16);
+    outputPanel = area.removeFromRight(getWidth() < 600 ? 151 : 171);
+    auto output = outputPanel.reduced(14, 10);
+    outputLabel.setBounds(output.removeFromTop(23));
+    outputDial.setBounds(output.removeFromTop(std::clamp(output.getHeight() - 76, 78, 106)));
+    matchButton.setBounds(output.removeFromTop(28));
+    matchStatus.setBounds(output.removeFromTop(22));
+    relearnButton.setBounds(output.removeFromTop(26).withSizeKeepingCentre(84, 26));
+    area.removeFromRight(12);
 
     const int controls = static_cast<int>(info.controls.size());
-    const int rows = controls > 4 ? 2 : 1;
+    const int availableColumns = std::clamp(area.getWidth() / 92, 1, 4);
+    const int columnsPerRow = controls == 4 && availableColumns == 3 ? 2 : availableColumns;
+    const int rows = (controls + columnsPerRow - 1) / columnsPerRow;
     const int rowHeight = area.getHeight() / rows;
-    for (int start = 0; start < controls; start += 4)
+    for (int start = 0; start < controls; start += columnsPerRow)
     {
         auto row = area.removeFromTop(rowHeight).withTrimmedBottom(8);
-        const int columns = std::min(4, controls - start);
-        const int width = row.getWidth() / columns;
+        row = row.withSizeKeepingCentre(row.getWidth(), std::min(154, row.getHeight()));
+        const int columns = std::min(columnsPerRow, controls - start);
+        const int width = std::min(132, row.getWidth() / columns);
+        row = row.withSizeKeepingCentre(width * columns, row.getHeight());
         for (int offset = 0; offset < columns; ++offset)
         {
             const auto index = static_cast<size_t>(start + offset);
-            cards[index] = row.removeFromLeft(width).reduced(4, 0);
-            auto column = cards[index].reduced(8, 8);
+            auto column = row.removeFromLeft(width).reduced(4, 3);
             labels[index].setBounds(column.removeFromTop(23));
             dials[index].setBounds(column);
         }
@@ -243,19 +284,29 @@ void ParametricNAMEditor::timerCallback()
     auto next = processor.modelInfo();
     const auto previous = std::move(info);
     info = std::move(next);
-    amplifier.setText(info.amplifier.isEmpty() ? "No model loaded" : info.amplifier, juce::dontSendNotification);
-    status.setText(info.error, juce::dontSendNotification);
+    amplifier.setText(info.amplifier.isEmpty() ? "ParametricNAM" : info.amplifier, juce::dontSendNotification);
+    status.setText(info.error.isEmpty() && info.controls.empty() ? juce::String("Load a .pnam model") : info.error, juce::dontSendNotification);
 
     if (info.controls.size() != previous.controls.size())
     {
-        setSize(editorWidth, info.controls.empty() ? 130 : info.controls.size() > 4 ? 482 : 330);
+        const auto minimumHeight = minimumHeightFor(info.controls.size());
+        setResizeLimits(minimumWidth, minimumHeight, maximumWidth, maximumHeight);
+        const auto preferredHeight = previous.controls.empty() && !info.controls.empty()
+            ? (info.controls.size() > 4 ? 442 : 346) : getHeight();
+        setSize(getWidth(), std::max(minimumHeight, preferredHeight));
         resized();
         repaint();
     }
 
     const auto& match = info.match;
-    matchButton.setVisible(!info.controls.empty());
-    relearnButton.setVisible(!info.controls.empty());
+    const bool hasModel = !info.controls.empty();
+    const bool manual = info.modelReady && !match.enabled;
+    outputLabel.setVisible(hasModel);
+    outputDial.setVisible(hasModel);
+    outputDial.setEnabled(manual);
+    outputDial.setAlpha(manual ? 1.0f : 0.38f);
+    matchButton.setVisible(hasModel);
+    relearnButton.setVisible(hasModel && match.enabled);
     matchStatus.setVisible(!info.controls.empty());
     matchButton.setEnabled(info.modelReady);
     matchButton.setToggleState(match.enabled, juce::dontSendNotification);
@@ -266,7 +317,7 @@ void ParametricNAMEditor::timerCallback()
         if (match.measuring)
             matchText = "Measuring " + juce::String(match.activeSeconds, 1) + " / 5 s";
         else if (match.noOutput)
-            matchText = "Output too quiet. Relearn.";
+            matchText = "Output too quiet";
         else if (match.correctionDb)
             matchText = juce::String(*match.correctionDb > 0 ? "+" : "") + juce::String(*match.correctionDb, 1) + " dB";
     }

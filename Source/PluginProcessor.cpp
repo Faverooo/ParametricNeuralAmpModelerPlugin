@@ -27,6 +27,10 @@ juce::AudioProcessorValueTreeState::ParameterLayout makeParameters()
             juce::ParameterID{id, 1}, "Control " + juce::String(static_cast<int>(i + 1)),
             juce::NormalisableRange<float>{0.0f, 1.0f}, 0.5f));
     }
+    layout.add(std::make_unique<juce::AudioParameterFloat>(
+        juce::ParameterID{ParametricNAMProcessor::outputTrimId, 1}, "Output",
+        juce::NormalisableRange<float>{-24.0f, 24.0f, 0.1f}, 0.0f,
+        juce::AudioParameterFloatAttributes().withLabel("dB")));
     return layout;
 }
 }
@@ -38,6 +42,7 @@ ParametricNAMProcessor::ParametricNAMProcessor()
 {
     for (size_t i = 0; i < maximumControls; ++i)
         controlValues[i] = parameters.getRawParameterValue(controlId(i));
+    outputTrim = parameters.getRawParameterValue(outputTrimId);
 }
 
 juce::String ParametricNAMProcessor::controlId(size_t index)
@@ -79,8 +84,13 @@ void ParametricNAMProcessor::prepareToPlay(double sampleRate, int maximumBlockSi
     processingRate = sampleRate;
     blockCapacity = maximumBlockSize;
     modelReady = model && model->prepare(sampleRate, maximumBlockSize);
-    matchGain.reset(sampleRate, 0.05);
-    matchGain.setCurrentAndTargetValue(juce::Decibels::decibelsToGain(levelMatch.targetDb()));
+    outputGain.reset(sampleRate, 0.05);
+    outputGain.setCurrentAndTargetValue(juce::Decibels::decibelsToGain(outputTargetDb()));
+}
+
+float ParametricNAMProcessor::outputTargetDb() const
+{
+    return levelMatch.targetDb(outputTrim->load(std::memory_order_relaxed));
 }
 
 void ParametricNAMProcessor::processBlock(juce::AudioBuffer<float>& buffer, juce::MidiBuffer&)
@@ -118,8 +128,8 @@ void ParametricNAMProcessor::processBlock(juce::AudioBuffer<float>& buffer, juce
     if (measuring)
         levelMatch.measure(dryEnergy, sumSquares(buffer), buffer.getNumSamples(), buffer.getNumChannels(), processingRate);
 
-    matchGain.setTargetValue(juce::Decibels::decibelsToGain(levelMatch.targetDb()));
-    matchGain.applyGain(buffer, buffer.getNumSamples());
+    outputGain.setTargetValue(juce::Decibels::decibelsToGain(outputTargetDb()));
+    outputGain.applyGain(buffer, buffer.getNumSamples());
 }
 
 void ParametricNAMProcessor::openModel(const juce::File& file)
@@ -159,7 +169,7 @@ void ParametricNAMProcessor::loadModel(const juce::File& file, bool setDefaults)
                 continue;
             model.swap(next);
             levelMatch = {};
-            matchGain.setCurrentAndTargetValue(1.0f);
+            outputGain.setCurrentAndTargetValue(juce::Decibels::decibelsToGain(outputTargetDb()));
             modelReady = ready;
             modelFile = file;
             modelError.clear();
@@ -262,7 +272,7 @@ void ParametricNAMProcessor::setStateInformation(const void* data, int bytes)
         modelReady = false;
         modelFile = juce::File{};
         levelMatch = {};
-        matchGain.setCurrentAndTargetValue(1.0f);
+        outputGain.setCurrentAndTargetValue(1.0f);
         modelError.clear();
     }
 }
