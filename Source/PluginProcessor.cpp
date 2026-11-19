@@ -145,7 +145,13 @@ void ParametricNAMProcessor::loadModel(const juce::File& file, bool setDefaults)
         auto next = std::make_unique<Model>(std::filesystem::path(std::u8string(path.begin(), path.end())));
         if (setDefaults)
         {
-            const auto& controls = next->channels.front().Controls();
+            const auto& channel = next->channels.front();
+            if (const auto trim = channel.OutputTrimDb())
+            {
+                auto* output = parameters.getParameter(outputTrimId);
+                output->setValueNotifyingHost(output->convertTo0to1(*trim));
+            }
+            const auto& controls = channel.Controls();
             for (size_t i = 0; i < controls.size(); ++i)
             {
                 const auto& control = controls[i];
@@ -185,6 +191,7 @@ void ParametricNAMProcessor::loadModel(const juce::File& file, bool setDefaults)
         {
             previous.swap(model);
             modelReady = false;
+            levelMatch = {};
             modelFile = file;
         }
     }
@@ -247,6 +254,13 @@ void ParametricNAMProcessor::setStateInformation(const void* data, int bytes)
 
     auto state = juce::ValueTree::fromXml(*xml);
     const auto path = state.getProperty("modelFile").toString();
+    if (!state.getChildWithProperty("id", outputTrimId).isValid())
+    {
+        juce::ValueTree trimState("PARAM");
+        trimState.setProperty("id", outputTrimId, nullptr);
+        trimState.setProperty("value", 0.0f, nullptr);
+        state.appendChild(trimState, nullptr);
+    }
     parameters.replaceState(state);
     if (path.isNotEmpty())
     {

@@ -74,6 +74,7 @@ jobs:
           resources="package/ParametricNAM.vst3/Contents/Resources"
           mkdir -p "$resources"
           git -C core rev-parse HEAD > "$resources/CORE_REVISION.txt"
+          cp LICENSE "$resources/LICENSE-ParametricNAM.txt"
           cp core/LICENSE "$resources/LICENSE-Core.txt"
           cp ci-juce/LICENSE.md "$resources/LICENSE-JUCE.md"
       - name: Build Windows installer
@@ -123,8 +124,8 @@ jobs:
         env:
           ARCHIVE: ParametricNAM-VST3-${{ runner.os }}-${{ runner.arch }}.zip
         run: |
-          cp README.md package/
-          (cd package && cmake -E tar cf "../$ARCHIVE" --format=zip ParametricNAM.vst3 README.md)
+          cp README.md LICENSE package/
+          (cd package && cmake -E tar cf "../$ARCHIVE" --format=zip ParametricNAM.vst3 README.md LICENSE)
       - uses: actions/upload-artifact@v6
         if: github.ref_type != 'tag'
         with:
