@@ -48,10 +48,17 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y libfreetype-dev libfontconfig1-dev libx11-dev libxext-dev libxinerama-dev libxrandr-dev libxcursor-dev libgl1-mesa-dev libcurl4-openssl-dev
-      - run: cmake -S . -B build -DPNAM_CORE_DIR="${{ github.workspace }}/core" -DPNAM_JUCE_DIR=ci-juce -DCMAKE_BUILD_TYPE=Release "-DPNAM_RELEASE_TAG=$PNAM_RELEASE_TAG"
+      - name: Configure CMake
         shell: bash
         env:
           PNAM_RELEASE_TAG: ${{ github.ref_type == 'tag' && github.ref_name || '' }}
+        run: |
+          set --
+          if [[ "$RUNNER_OS" == macOS ]]; then
+            set -- "-DCMAKE_OSX_ARCHITECTURES=arm64;x86_64"
+          fi
+          cmake -S . -B build -DPNAM_CORE_DIR="$GITHUB_WORKSPACE/core" \
+            -DPNAM_JUCE_DIR=ci-juce -DCMAKE_BUILD_TYPE=Release "-DPNAM_RELEASE_TAG=$PNAM_RELEASE_TAG" "$@"
       - run: cmake --build build --config Release --target ParametricNAM_VST3 test_level_match --parallel 2
       - run: ctest --test-dir build -C Release --output-on-failure
       - name: Stage VST3 and resolve installer version
@@ -96,10 +103,15 @@ jobs:
         env:
           VERSION: ${{ steps.package.outputs.version }}
         run: |
-          pkgbuild --component package/ParametricNAM.vst3 \
+          bundle="package/ParametricNAM.vst3"
+          executable=$(/usr/libexec/PlistBuddy -c 'Print :CFBundleExecutable' "$bundle/Contents/Info.plist")
+          lipo -verify_arch arm64 x86_64 "$bundle/Contents/MacOS/$executable"
+          codesign --force --sign - "$bundle"
+          codesign --verify --deep --strict --all-architectures --verbose=2 "$bundle"
+          pkgbuild --component "$bundle" \
             --identifier com.faverooo.parametricnam.vst3 --version "$VERSION" \
             --install-location /Library/Audio/Plug-Ins/VST3 \
-            "installers-out/ParametricNAM-VST3-$VERSION-macOS-$RUNNER_ARCH.pkg"
+            "installers-out/ParametricNAM-VST3-$VERSION-macOS-Universal.pkg"
       - name: Build and test Linux installer
         if: runner.os == 'Linux'
         shell: bash
