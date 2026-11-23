@@ -58,9 +58,22 @@ private:
         std::array<float, maximumControls> lastValues{};
         bool controlsSet = false;
         bool prepare(double rate, int maximumBlockSize);
+        void setControls(const std::array<float, maximumControls>& values);
     };
 
-    void loadModel(const juce::File&, bool setDefaults);
+    void loadModel(const juce::File&, const juce::ValueTree* restoredState = nullptr);
+    std::array<float, maximumControls> currentControlValues(
+        std::span<const nam::ParametricControl>, const juce::ValueTree* restoredState = nullptr) const;
+    std::array<float, maximumControls> playbackControlValues() const;
+    void snapshotParameters();
+    struct ParameterSnapshot
+    {
+        juce::ValueTree state;
+        std::array<float, maximumControls> dialValues;
+        float trimDb;
+    };
+    juce::CriticalSection modelChangeLock;
+    std::optional<ParameterSnapshot> parameterSnapshot;
     std::array<std::atomic<float>*, maximumControls> controlValues{};
     std::unique_ptr<Model> model;
     juce::File modelFile;
